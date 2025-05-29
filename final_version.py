@@ -1,0 +1,709 @@
+# ---
+# title: "Case Study: How Does a Bike-Share Navigate Speedy"
+# author: "Yen Nguyen Le Hoang"
+# date: "2025-05-26"
+# output:
+#   html_document:
+#     toc: false
+#     theme: flatly
+#     highlight: tango
+#     df_print: paged
+# ---
+
+# --- Start of code block ---
+# knitr::opts_chunk$set(echo = TRUE)
+# --- End of code block ---
+
+
+# # Table of Contents {.tabset}
+
+# ## Introduction
+
+
+# This project is the capstone assignment for the Google Data Analytics Professional Certificate program. The program prepares participants for a career in data analytics with training focused on key analytical skills (data cleaning, analysis, and visualization) and tools (Excel, SQL, R Programming, Tableau).
+
+
+# This project will analyze publicly available data sets, provided by the course, for a bike share program based in Chicago.
+
+
+# Three questions will guide the future marketing program:
+
+# *(1) How do annual members and casual riders use Cyclistic bikes differently?*
+
+# *(2) Why would casual riders buy Cyclistic annual memberships?*
+
+# *(3) How can Cyclistic use digital media to influence casual riders to become members?*
+
+
+# In this assignment, I will produce a report with the following deliverables:
+
+# *1. A clear statement of the business task*
+
+# *2. A description of all data sources used*
+
+# *3. Documentation of any cleaning or manipulation of data*
+
+# *4. A summary of my analysis*
+
+# *5. Supporting visualizations and key findings*
+
+
+# ## Ask Phase
+
+
+# **The Business Task:** By analyzing the trip data from *March 2024* to *February 2025*, I will deliver recommendations rely on  understand how casual riders, and annual members use the service differently. In particular, I will **find trends and patterns among casual riders and membership riders, and identify potential riders who can get benefit from annual membership**. Using that information I will try to provide answers on how to convert casual riders to annual members.
+
+
+# **Stakeholders:**
+
+# *(1) The director of marketing*
+
+# *(2) The marketing analysis team*
+
+# *(3) Cyclistic's Executive team*
+
+
+# They expect that: Design marketing strategies aimed at converting casual riders into annual members
+
+
+# ## Prepare Phase
+
+
+# **The Data-set:** I used the twelve-month (March_2021 - February_2025) historical trip data sets provided by Divvy to perform this analysis. This includes twelve different files each containing a month of data ranging from March 2024, to February 2025. This is public data that you can use to explore how different customer types are using Divvy bikes. The data has been made available by Motivate International Inc. under this license.
+
+
+# ### Import packages & Data Files
+
+
+# I used the programming language R to conduct this analysis. First I need to install, load packages and then import data files.
+
+
+# --- Start of code block ---
+# library(readr) #helps import data
+# library(tidyverse) #helps wrangle data
+# library(lubridate) #helps wrangle date attributes
+# library(janitor) #helps clean data
+# library(timechange) #helps manipulation of Date-Times
+# library(dplyr) #helps clean data
+# library(ggplot2) #helps visualize data
+# library(patchwork) #helps combine charts
+# library(gridExtra)
+# library(grid)
+# Sys.setlocale("LC_TIME", "C") #setting English  
+# --- End of code block ---
+
+
+# --- Start of code block ---
+# Mar_24 <- read_csv("D:/11. DA/Foudation data data and data everwhere/202403-divvy-tripdata.csv")
+# Apr_24 <- read_csv("D:/11. DA/Foudation data data and data everwhere/202404-divvy-tripdata.csv")
+# May_24 <- read_csv("D:/11. DA/Foudation data data and data everwhere/202405-divvy-tripdata.csv")
+# Jun_24 <- read_csv("D:/11. DA/Foudation data data and data everwhere/202406-divvy-tripdata.csv")
+# Jul_24 <- read_csv("D:/11. DA/Foudation data data and data everwhere/202407-divvy-tripdata.csv")
+# Aug_24 <- read_csv("D:/11. DA/Foudation data data and data everwhere/202408-divvy-tripdata.csv")
+# Sep_24 <- read_csv("D:/11. DA/Foudation data data and data everwhere/202409-divvy-tripdata.csv")
+# Oct_24 <- read_csv("D:/11. DA/Foudation data data and data everwhere/202410-divvy-tripdata.csv")
+# Nov_24 <- read_csv("D:/11. DA/Foudation data data and data everwhere/202411-divvy-tripdata.csv")
+# Dec_24 <- read_csv("D:/11. DA/Foudation data data and data everwhere/202412-divvy-tripdata.csv")
+# Jan_25 <- read_csv("D:/11. DA/Foudation data data and data everwhere/202501-divvy-tripdata.csv")
+# Feb_25 <- read_csv("D:/11. DA/Foudation data data and data everwhere/202502-divvy-tripdata.csv")
+# --- End of code block ---
+
+
+# ### Check all files have the same columns
+
+# --- Start of code block ---
+# colnames(Mar_24)
+# colnames(Apr_24)
+# colnames(May_24)
+# colnames(Jun_24)
+# colnames(Jul_24)
+# colnames(Aug_24)
+# colnames(Sep_24)
+# colnames(Oct_24)
+# colnames(Nov_24)
+# colnames(Dec_24)
+# colnames(Jan_25)
+# colnames(Feb_25)
+# --- End of code block ---
+
+
+
+# Each data-set was made up of thirteen columns. These files had the same columns => make sure consistency. 
+
+# After that, I combined all files together vertically into a single large data frame by using `rbind()` function. 
+
+# --- Start of code block ---
+# Total_trip <- rbind(Mar_24, Apr_24, May_24, Jun_24, Jul_24, Aug_24, Sep_24, Oct_24, Nov_24, Dec_24, Jan_25, Feb_25)
+# --- End of code block ---
+
+
+# --- Start of code block ---
+# str(Total_trip)
+# --- End of code block ---
+
+
+# Data frame named **"Total_trip"**, include 5.783.100 obs, 13 vars.
+
+
+# ## Process Phase 
+
+
+# Cleaning and Manipulation of Data before conducting analysis.
+
+# ### Remove NA/null values
+
+# I assigned to a new data frame named **"Total_trip_1"**
+
+# --- Start of code block ---
+# Total_trip_1 <- na.omit(Total_trip)
+# --- End of code block ---
+
+
+# *Result:* 1.662.526 values with NA/null information were removed.
+
+
+# ### Add a new var “ride_length” to calculate the length of each trip in minutes
+
+
+# --- Start of code block ---
+# Total_trip_1$ride_length <- difftime(Total_trip_1$ended_at, Total_trip_1$started_at, units="mins")
+# --- End of code block ---
+
+
+
+# ### Check the internal structure of (Total_trip_1): 
+
+
+# I checked data type quickly. 
+
+# --- Start of code block ---
+# str(Total_trip_1)
+# --- End of code block ---
+
+
+# So I realized that: need to convert type of "ride_length" from **Factor** to **Numeric**:
+
+# --- Start of code block ---
+# Total_trip_1$ride_length <- as.numeric(as.character(Total_trip_1$ride_length))
+# is.numeric(Total_trip_1$ride_length)
+# --- End of code block ---
+
+
+
+# ### Remove ‘unwanted bad’ data
+
+
+# While running `View(Total_trip_1)`, there were some negative ride times -> ‘unwanted bad’ data. So I removed values which ride_length<1 **OR** > 1440 minutes.
+
+
+# --- Start of code block ---
+# Total_trip_2 <- Total_trip_1[!(Total_trip_1$ride_length <1|Total_trip_1$ride_length > 1440),]
+# --- End of code block ---
+
+
+
+# ### Breaking “started_at” and “ended_at” columns down into "date", “days_of_week”, “month_year”, “hour"
+
+
+# --- Start of code block ---
+# Total_trip_2 <- mutate(Total_trip_2, started_at = as_datetime(started_at), ended_at = as_datetime(ended_at)) #convert "started_at" and "ended_at" to POSIXct (date-time) to extract hour, date, day, month, year
+# Total_trip_2$date <- as.Date(Total_trip_2$started_at) #extract date
+# Total_trip_2$days_of_week <- format(as.Date(Total_trip_2$date), "%A") #extract days_of_week
+# unique(Total_trip_2$days_of_week)
+# --- End of code block ---
+
+
+# --- Start of code block ---
+# Total_trip_2$days_of_week <- factor(Total_trip_2$days_of_week, levels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))
+# is.factor(Total_trip_2$days_of_week)
+# --- End of code block ---
+
+
+
+# --- Start of code block ---
+# Total_trip_2$month_year <- format(Total_trip_2$started_at, "%b-%Y") #extract "month_year"
+# ordered_levels <- c("Mar-2024", "Apr-2024", "May-2024", "Jun-2024", "Jul-2024",
+#                     "Aug-2024", "Sep-2024", "Oct-2024", "Nov-2024", "Dec-2024",
+#                     "Jan-2025", "Feb-2025")
+# Total_trip_2$month_year <- factor(Total_trip_2$month_year, levels = ordered_levels, ordered = TRUE)
+# Total_trip_2$start_hour <- format(as.POSIXct(Total_trip_2$started_at), format = "%H") #extract start_hour
+# --- End of code block ---
+
+
+
+# ### Remove duplicate
+
+
+# --- Start of code block ---
+# View(Total_trip_2)
+# --- End of code block ---
+
+
+# --- Start of code block ---
+# Total_trip_3 <- Total_trip_2[!duplicated(Total_trip_2$ride_id),]  
+# --- End of code block ---
+
+
+# --- Start of code block ---
+# View(Total_trip_3)
+# --- End of code block ---
+
+
+
+# ### Check type of data
+
+
+# --- Start of code block ---
+# dim(Total_trip_3)
+# glimpse(Total_trip_3)
+# --- End of code block ---
+
+
+
+# ### One final check before analyzing
+
+
+# --- Start of code block ---
+# colSums(is.na(Total_trip_3))
+# sum(duplicated(Total_trip_3$ride_id))
+# View(filter(Total_trip_3, Total_trip_3$started_at > Total_trip_3$ended_at))
+# View(filter(Total_trip_3, Total_trip_3$ride_length <1|Total_trip_3$ride_length > 1440))
+# --- End of code block ---
+
+
+
+# *Conclusion:* All of variables had correct type. The final data frame named **“Total_trip_3”**, include *4.084.919 observations* and *18 variables*.
+
+
+# ## Analyze + Share Phase
+
+
+# In this part, I focused on **comparing some objects between casual riders, and members**.
+
+# Firstly, I used the `summary()` to quickly get the min, median, mean, and max for “ride_length”.
+
+# --- Start of code block ---
+# summary(Total_trip_3$ride_length)
+# --- End of code block ---
+
+
+# Comparison of the mean, median, max, and min, between members and casual riders:
+
+# --- Start of code block ---
+# Total_trip_3 %>%
+#   group_by(member_casual) %>%
+#   summarise(
+#     mean = mean(ride_length),
+#     median = median(ride_length),
+#     max = max(ride_length),
+#     min = min(ride_length)
+#   )
+# --- End of code block ---
+
+
+
+# We can see that for both the mean and median, **casual riders have trips of longer duration than member riders**. 
+
+# *For example,* the mean ride length for casual users (24.13 minutes) is almost double that of members (12.45 minutes), suggesting that casual users often take longer or more leisurely trips compared to members, who may use bikes more for commuting or short-distance travel. 
+
+# **Warning:**
+
+# (1) `sum(as.numeric(Total_trip_3$ride_length) > 24.13, na.rm = TRUE)` -> result: **678327** ~16% in data frame. 
+
+# (2) `skewness(Total_trip_2$ride_length, na.rm = TRUE)` -> result: **20.881**.
+
+# (3) The skewness of the "ride_length" variable indicated a severely right-skewed distribution. But I didn't remove the variables which could be outliers. 
+
+
+# ### The number of rides per month
+
+
+# --- Start of code block ---
+# # create bar_chart_mon
+# bar_chart_mon <- Total_trip_3 %>%
+#   group_by(member_casual, month_year) %>%
+#   summarise(
+#     number_of_rides = n(),
+#     average_duration = mean(ride_length),
+#     .groups = "drop"
+#   ) %>%
+#   arrange(member_casual, month_year) %>%
+#   ggplot(aes(x = month_year, y = number_of_rides, fill = member_casual)) +
+#   geom_col(position = "dodge") +
+#   labs(title = "Pic1: Number of Rides by Month and Member Type",
+#        x = "Month-Year", y = "Number of Rides") +
+#   theme_minimal() +
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+# 
+# # create bar_plot_mon
+# table_data_mon <- Total_trip_3 %>%
+#   group_by(member_casual, month_year) %>%
+#   summarise(number_of_rides = n(), .groups = 'drop') %>%
+#   pivot_wider(
+#     names_from = month_year,
+#     values_from = number_of_rides,
+#     values_fill = 0
+#   )
+# names(table_data_mon) <- make.names(names(table_data_mon), unique = TRUE)
+# small_font_theme <- ttheme_minimal(
+#   core = list(fg_params = list(cex = 0.4)),
+#   colhead = list(fg_params = list(cex = 0.5))
+# )
+# table_plot_mon <- tableGrob(table_data_mon, theme = small_font_theme)
+# 
+# # Combine bar_chart_mon + table_plot_mon
+# combined_plot_mon <- bar_chart_mon / table_plot_mon
+# print(combined_plot_mon)
+# --- End of code block ---
+
+
+
+# I would like to see the top 10 days with the highest number of bike users, to support my recommendation. 
+
+# And I realized: 
+
+# **top of member riders -> September,**
+
+# **top of casual riders -> summer vacation.**
+
+# --- Start of code block ---
+# daily_rides <- Total_trip_3 %>%
+#   group_by(date, member_casual) %>%
+#   summarise(number_of_rides = n(), .groups = 'drop')
+# top_10_days <- daily_rides %>%
+#   group_by(member_casual) %>%
+#   slice_max(order_by = number_of_rides, n = 10)
+# print(top_10_days)
+# --- End of code block ---
+
+
+# **Conclusions:** 
+
+# - Both members and casual users show a significant increase in bike usage from May to October. This period aligns with warmer weather and the peak travel season. 
+
+# - The lowest usage months are December, January, and February, for both user types - winter conditions, cold weather and snowfall can make cycling less suitable.
+
+# **Recommendation:** 
+
+# For marketing campaigns targeting casual users, it would be strategic to be conducted between May and October. The three highest-usage months for casual users — July, August, and September, summer vacation — present the best opportunity for engagement and promotions, as they consistently show high and relatively equal numbers of rides.
+
+# ### The number of rides per day
+
+# --- Start of code block ---
+# #create bar_chart_day
+# bar_chart_day <- Total_trip_3 %>% 
+#   mutate(days_of_week = wday(started_at, label = TRUE)) %>% 
+#   group_by(member_casual, days_of_week) %>% 
+#   summarise(
+#     number_of_rides = n(),
+#     average_duration = mean(ride_length),
+#     .groups = "drop"
+#   ) %>% 
+#   arrange(member_casual, days_of_week) %>% 
+#   ggplot(aes(x = days_of_week, y = number_of_rides, fill = member_casual)) +
+#   geom_col(position = "dodge") +
+#   labs(title = "Pic2: Number of Rides by Day and Member Type",
+#        x = "Day of Week", y = "Number of Rides") +
+#   theme_minimal()
+# 
+# #create table_plot_day
+# table_data_day <- Total_trip_3 %>%
+#   mutate(days_of_week = wday(started_at, label = TRUE)) %>%
+#   group_by(member_casual, days_of_week) %>%
+#   summarise(number_of_rides = n(), .groups = 'drop') %>%
+#   pivot_wider(
+#     names_from = days_of_week,
+#     values_from = number_of_rides,
+#     values_fill = 0
+#   )
+# table_plot_day <- tableGrob(table_data_day)
+# # Combine bar_chart_day + table_plot_day
+# names(table_data_day) <- make.names(names(table_data_day), unique = TRUE)
+# combined_plot_day <- bar_chart_day / table_plot_day
+# print(combined_plot_day)
+# --- End of code block ---
+
+
+# **Conclusions:** 
+
+# - **Members** dominate rides on weekdays, **especially Tuesday–Thursday**. 
+
+# - **Casual** users are most active on weekends—nearly equal to members on **Saturday and Sunday**. There’s a big drop in casual rides during weekdays.
+
+
+# ### The number of rides per hour
+
+
+# --- Start of code block ---
+# # create bar_chart_hour
+# bar_chart_hour <- Total_trip_3 %>%
+#   group_by(member_casual, start_hour) %>%
+#   summarise(
+#     number_of_rides = n(),
+#     average_duration = mean(ride_length),
+#     .groups = "drop"
+#   ) %>%
+#   arrange(member_casual, start_hour) %>%
+#   ggplot(aes(x = start_hour, y = number_of_rides, fill = member_casual)) +
+#   geom_col(position = "dodge") +
+#   labs(title = "Pic3: Number of Rides by Start Hour and Member Type",
+#        x = "Start Hour", y = "Number of Rides") +
+#   theme_minimal() +
+#   theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+# 
+# # create heatmap_hour
+# heatmap_data <- Total_trip_3 %>%
+#   group_by(member_casual, start_hour) %>%
+#   summarise(number_of_rides = n(), .groups = "drop")
+# heatmap_hour <- ggplot(heatmap_data, aes(x = factor(start_hour), y = member_casual, fill = number_of_rides)) +
+#   geom_tile(color = "white") +
+#   scale_fill_viridis_c() +
+#   labs(title = "Heatmap",
+#        x = "Start Hour", y = "Member Type", fill = "Number of Rides") +
+#   theme_minimal() +
+#   theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+# library(ggplotify)
+# heatmap_pp_hour <- as.ggplot(heatmap_hour)
+# # Combine bar_chart_mon + table_plot_mon
+# combined_plot_hour <- bar_chart_hour/heatmap_pp_hour
+# print(combined_plot_hour)
+# --- End of code block ---
+
+
+
+# **Conclusions:** 
+
+# - **Member** riders show a distinct bimodal pattern, with noticeable peaks during: Morning commute hours (07:00–09:00) — likely representing the time when members use bikes to travel to work. Evening rush hours (16:00–18:00) — especially around 17:00, when the number of rides peaks significantly. This suggests that members predominantly use the service as part of their daily commute. 
+
+# - **Casual** users, on the other hand, show a more uniform usage pattern, with a gradual increase from midday to early evening (12:00–18:00). The highest usage is around 16:00–17:00, but the difference between other hours is less pronounced than with member riders. This indicates that casual users may use the service more for leisure or irregular activities rather than commuting.
+
+
+# **HIGHTLIGHT POINT: I want to compare Rides by Start Hour on Weekends and on Weekdays**
+
+# --- Start of code block ---
+# # Plot 1: Weekdays
+# plot_weekday <- Total_trip_3 %>%
+#   filter(days_of_week %in% c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")) %>%
+#   ggplot(aes(x = start_hour, fill = member_casual)) +
+#   geom_bar(position = "dodge") +
+#   labs(
+#     title = "Pic5: Rides by Start Hour on Weekdays",
+#     x = "Start Hour",
+#     y = "Number of Rides",
+#     fill = "Member Type"
+#   ) +
+#   scale_fill_manual(values = c("casual" = "salmon", "member" = "turquoise")) +
+#   theme_minimal()
+# 
+# # Plot 2: Weekends
+# plot_weekend <- Total_trip_3 %>%
+#   filter(days_of_week %in% c("Saturday", "Sunday")) %>%
+#   ggplot(aes(x = start_hour, fill = member_casual)) +
+#   geom_bar(position = "dodge") +
+#   labs(
+#     title = "Pic6: Rides by Start Hour on Weekends",
+#     x = "Start Hour",
+#     y = "Number of Rides",
+#     fill = "Member Type"
+#   ) +
+#   scale_fill_manual(values = c("casual" = "salmon", "member" = "turquoise")) +
+#   theme_minimal()
+# 
+# # Combine
+# plot_weekday + plot_weekend + plot_layout(ncol = 1)
+# --- End of code block ---
+
+
+
+# (1) **On weekends,** I am quite surprised to observe that both members and casual users exhibit very similar patterns and volumes of bike usage. There is no significant difference in either the usage trend or the number of rides between the two membership types.
+# (2) **On weekdays (including Monday to Friday)**, however, there is a clear distinction in both the number of rides and the riding patterns between the two groups. I make sure that the data from weekdays is what contributes most to the differences observed in the overall chart titled “Pic3: Number of Rides by Start Hour and Member Type.” While casual riders show a single peak in usage between 4:00 PM and 6:00 PM, members have a bimodal pattern with peaks during 7:00–9:00 AM and again from 4:00–6:00 PM.
+# (3) The total number of bike rides for both members and casual users **on weekends is noticeably lower than on weekdays**. 
+
+
+# To illustrate this more clearly, I present a pie chart to support my third point: 
+
+# --- Start of code block ---
+# # Pie_1: Member - Weekdays vs Weekends
+# pie1_data <- Total_trip_3 %>%
+#   filter(member_casual == "member") %>%
+#   mutate(day_type = ifelse(wday(started_at, label = TRUE) %in% c("Sat", "Sun"), "Weekend", "Weekday")) %>%
+#   count(day_type)
+# 
+# pie1 <- ggplot(pie1_data, aes(x = "", y = n, fill = day_type)) +
+#   geom_col(width = 1) +
+#   coord_polar("y") +
+#   labs(title = "Member") +
+#   theme_void() +
+#   scale_fill_brewer(palette = "Set1")
+# 
+# # Pie 2: Casual - Weekdays vs Weekends
+# pie2_data <- Total_trip_3 %>%
+#   filter(member_casual == "casual") %>%
+#   mutate(day_type = ifelse(wday(started_at, label = TRUE) %in% c("Sat", "Sun"), "Weekend", "Weekday")) %>%
+#   count(day_type)
+# 
+# pie2 <- ggplot(pie2_data, aes(x = "", y = n, fill = day_type)) +
+#   geom_col(width = 1) +
+#   coord_polar("y") +
+#   labs(title = "Casual") +
+#   theme_void() +
+#   scale_fill_brewer(palette = "Set1")
+# 
+# # Pie 3: Weekday - Member vs Casual
+# pie3_data <- Total_trip_3 %>%
+#   filter(!(wday(started_at, label = TRUE) %in% c("Sat", "Sun"))) %>%
+#   count(member_casual)
+# 
+# pie3 <- ggplot(pie3_data, aes(x = "", y = n, fill = member_casual)) +
+#   geom_col(width = 1) +
+#   coord_polar("y") +
+#   labs(title = "Weekday") +
+#   theme_void() +
+#   scale_fill_brewer(palette = "Dark2")
+# 
+# # Pie 4: Weekend - Member vs Casual
+# pie4_data <- Total_trip_3 %>%
+#   filter(wday(started_at, label = TRUE) %in% c("Sat", "Sun")) %>%
+#   count(member_casual)
+# 
+# pie4 <- ggplot(pie4_data, aes(x = "", y = n, fill = member_casual)) +
+#   geom_col(width = 1) +
+#   coord_polar("y") +
+#   labs(title = "Weekend") +
+#   theme_void() +
+#   scale_fill_brewer(palette = "Dark2")
+# 
+# # Combine
+# (pie1 | pie2) / (pie3 | pie4)
+# 
+# --- End of code block ---
+
+
+
+# ### Compare trip_count and trip_duration
+
+# --- Start of code block ---
+# # number of trip categorized by rider type
+# trip_count <- Total_trip_3 %>%
+#   count(member_casual) %>%
+#   mutate(percentage = round(100 * n / sum(n), 1),
+#          label = paste0(member_casual, ": ", percentage, "%"))
+# plot1 <- ggplot(trip_count, aes(x = "", y = n, fill = member_casual)) +
+#   geom_bar(stat = "identity", width = 1) +
+#   coord_polar(theta = "y") +
+#   labs(title = "Total Trips by Rider Type") +
+#   geom_text(aes(label = label), position = position_stack(vjust = 0.5)) +
+#   theme_void() +
+#   scale_fill_brewer(palette = "Set2")
+# 
+# # trip duration categorized by rider type
+# trip_duration <- Total_trip_3 %>%
+#   group_by(member_casual) %>%
+#   summarise(total_duration = sum(ride_length, na.rm = TRUE)) %>%
+#   mutate(percentage = round(100 * total_duration / sum(total_duration), 1),
+#          label = paste0(member_casual, ": ", percentage, "%"))
+# plot2 <- ggplot(trip_duration, aes(x = "", y = total_duration, fill = member_casual)) +
+#   geom_bar(stat = "identity", width = 1) +
+#   coord_polar(theta = "y") +
+#   labs(title = "Total Trip Duration by Rider Type") +
+#   geom_text(aes(label = label), position = position_stack(vjust = 0.5)) +
+#   theme_void() +
+#   scale_fill_brewer(palette = "Set2")
+# 
+# # Combine:
+# plot1 + plot2
+# --- End of code block ---
+
+
+
+# - Casual riders made 36% of total trips, contributing to 53% of total trip duration. 
+
+# - Member riders made up 64% of total trips, just contributing to 47% of total trip duration.
+
+
+# ### Analyze Ride Duration by Day and Member Type:
+
+
+# --- Start of code block ---
+# # create bar_chart_duration
+# bar_chart_duration <- Total_trip_3 %>% 
+#   mutate(days_of_week = wday(started_at, label = TRUE)) %>% 
+#   group_by(member_casual, days_of_week) %>% 
+#   summarise(
+#     number_of_rides = n(),
+#     average_duration = mean(ride_length),
+#     .groups = "drop"
+#   ) %>% 
+#   arrange(member_casual, days_of_week) %>% 
+#   ggplot(aes(x = days_of_week, y = average_duration, fill = member_casual)) +
+#   geom_col(position = "dodge") +
+#   labs(title = "Pic7: Average Ride Duration by Day and Member Type",
+#        x = "Day of Week", y = "Average Duration (minutes)") +
+#   theme_minimal()
+# 
+# # create bar_plot_mon
+# table_data_duration <- Total_trip_3 %>%
+#   mutate(days_of_week = wday(started_at, label = TRUE)) %>%
+#   group_by(member_casual, days_of_week) %>%
+#   summarise(average_duration = round(mean(ride_length), 2), .groups = 'drop') %>%
+#   pivot_wider(
+#     names_from = days_of_week,
+#     values_from = average_duration,
+#     values_fill = 0
+#   )
+# names(table_data_duration) <- make.names(names(table_data_duration), unique = TRUE)
+# table_plot_duration <- tableGrob(table_data_duration)
+# 
+# # Combine bar_chart_mon + table_plot_mon
+# combined_duration <- bar_chart_duration / table_plot_duration
+# print(combined_duration)
+# 
+# --- End of code block ---
+
+
+
+# - Casual users consistently **have a longer average ride duration** than members across all days of the week. On Sunday and Saturday, the average ride duration for casual users is around 27.8 minutes and 27.4 minutes, respectively, while for members, it remains much lower at around 14.0–14.1 minutes. Casual users may use bikes for leisure or exploration, resulting in longer trip duration, especially on weekends.
+
+# - During weekdays (Monday to Friday), both user types show lower average duration. In particular, members maintain a relatively stable ride time of around 11.8 to 12.1 minutes -> commuting purposes, which explains the shorter and more consistent duration.
+
+
+# ### What type of bike casual riders and members prefer
+
+# --- Start of code block ---
+# Total_trip_3 %>% 
+#   group_by(member_casual, rideable_type) %>% 
+#   arrange(member_casual, rideable_type)  %>% 
+#   ggplot(aes(x = rideable_type, fill = member_casual)) +
+#   geom_bar(position = "dodge")
+# --- End of code block ---
+
+
+
+# - Electric scooters are the least used by both groups. This indicates they are not a popular option in the current system -> should not focus promoting this bike type.
+
+# - Casual users prefer classic bikes over electric bikes. However, the gap is not too large, suggesting electric bikes still have potential to attract casual users -> should promote both of classic and electric bikes.
+
+
+# ## RECOMMENDATIONS
+
+
+# **KEY FINDINGS**
+
+# (1) It seems that the casual users travel the same average distance than the member users, but they have relatively longer rides, that would indicate a more leisure oriented usage vs a more “public transport” or pragmatic use of the bikes by the annual members.
+
+# (2) While that member riders are more active on weekday, casual riders use the service more often over weekend. It lead me to conclude that member riders use this service for their commute while casual rider use it for entertainment.
+
+# (3) Average trip duration of casual riders is more than twice that of member riders over any given day of the week cumulatively.
+
+
+# **RECOMMENDATIONS**
+
+# (1) Organize campaign that highlight health and environmental benefits to instill the habit of cycling among the community by offering attractive prizes.
+
+# (2) Offer flexible membership programs, weekday or weekend-only membership, with more membership duration options, giving more freedom of choice to the current casual riders which use the bikes mainly on weekends and encourage weekday casual riders to choose for a better option.
+
+# (3) Remove electric scooter and invest more in increasing the number of classic bikes and electric bikes.
+
+# (4) Promotional campaigns targeting casual users on weekends could help boost usage and engagement. Suitable time period to promote casual riders usage: Month: July -> September, during 07:00–09:00 and 16:00–18:00 on Weekdays, Weekends can promote both of member and casual users during 11:00-17:00.
+
+# (5) Digital media to influence casual riders to become members: travel application, booking youtuber to introduce about "Discount code when registering for membership" and encourage people to use bicycle services more. 
